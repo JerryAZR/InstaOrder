@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/scripts">
+        <file>JDscripts/order.js</file>
+        <file>jquery/jquery-3.7.0.min.js</file>
+    </qresource>
+</RCC>
