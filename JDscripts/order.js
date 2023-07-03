@@ -1,4 +1,21 @@
 
+/**
+ * 判断是否是空
+ * @param value
+ */
+function isEmpty(value){
+	if(value == null || value == "" || value == "undefined" || value == undefined || value == "null"){
+		return true;
+	}
+	else{
+		value = value.replace(/\s/g,"");
+		if(value == ""){
+			return true;
+		}
+		return false;
+	}
+}
+
 function useColorApi(url, type) {
   var useColorApi = $("#useColorApi").val();
   if (useColorApi == "1") {
@@ -137,7 +154,11 @@ jQuery.ajax({
   xhrFields: {
     withCredentials: true //允许跨域带Cookie
   },
-  success: function (result) { window.alert("Success") },
+  success: function (result) {
+    window.alert("Success");
+    console.log("params:");
+    console.log(param);
+  },
   error: function (error) {
     $("#submit_loading").remove();
     $('#ignorePriceChange').val(0);
