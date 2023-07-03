@@ -66,7 +66,7 @@ public:
     SubmitOrderCallback(QUrl url = QUrl(JD::checkoutUrl)) : PageLoadCallback(url) {
         QFile file;
         // Get jQuery
-        file.setFileName(":/scripts/jquery/jquery-3.7.0.min.js");
+        file.setFileName(":/scripts/common/jquery-3.7.0.min.js");
         file.open(QIODevice::ReadOnly);
         jQuery = file.readAll();
         file.close();

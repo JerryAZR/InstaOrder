@@ -45,7 +45,10 @@ else()
     endif()
 endif()
 
-target_link_libraries(FastJD PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::WebEngineWidgets)
+target_link_libraries(FastJD PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::WebEngineWidgets
+)
 
 set_target_properties(FastJD PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
