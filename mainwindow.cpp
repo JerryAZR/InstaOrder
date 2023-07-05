@@ -17,8 +17,11 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     // Member initialization
-    //    _page = new QWebEnginePage(this);
-    _page = ui->webView2->page();
+        _page = new QWebEnginePage(this);
+//    _page = ui->webView2->page();
+    QTime now = QTime::currentTime();
+    QDateTime target = QDateTime(QDate::currentDate(), QTime(now.hour(), now.minute()));
+    ui->dateTimeEdit->setDateTime(target);
 
     // Javascript setup
     QFile jsFile;
@@ -47,6 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->orderBtn, &QAbstractButton::clicked, this, &MainWindow::plan_order);
 
     // Debug connections
+//    connect(ui->dateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, [](QDateTime time){qDebug() << time;});
     //    connect(_page, &QWebEnginePage::loadStarted, this, &MainWindow::__debug_load_start);
     //    connect(_page, &QWebEnginePage::urlChanged, this, &MainWindow::__debug_url_changed);
     //    connect(_page, &QWebEnginePage::visibleChanged, this, &MainWindow::__debug_visible);
@@ -81,12 +85,12 @@ void MainWindow::plan_order()
     QString itemID = ui->itemIDEdit->text();
     // TODO: If sufficient time remains, add order to the planned queue
     // Otherwise, prepare it immediately;
-    qint64 time = QDateTime(QDate(2023, 7, 3), QTime(23, 20, 0)).toMSecsSinceEpoch();
-    OrderInfo info = {itemID, 1, time};
+    qint64 time = ui->dateTimeEdit->dateTime().toMSecsSinceEpoch() + 1000;
+    OrderInfo *info = new OrderInfo(itemID, 1, time);
     prepare_order(info);
 }
 
-void MainWindow::prepare_order(OrderInfo info)
+void MainWindow::prepare_order(OrderInfo *info)
 {
     CheckOutCallback * checkout = new CheckOutCallback;
     // Clear any remaining (expired) actions
@@ -95,16 +99,16 @@ void MainWindow::prepare_order(OrderInfo info)
     // so checkout (getOrderInfo) is the only action to be queued
     _loadStartCallbacks.enqueue(checkout);
     // Check whether the order should be placed now or later
-    qint64 targetTime = info.orderTimeMSec;
+    qint64 targetTime = info->orderTimeMSec;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     if (now >= targetTime) {
         // Order should be placed immediately
-        place_order(info.itemId, info.itemCount);
+        place_order(info->itemId, info->itemCount);
     } else {
         // Set-up a timer to add item to cart at specified time
         qint64 delay = targetTime - now;
-        QTimer::singleShot(delay, Qt::PreciseTimer, this, [this, info](){
-            this->place_order(info.itemId, info.itemCount);
+        QTimer::singleShot(delay, Qt::PreciseTimer, info, [this, info](){
+            this->place_order(info->itemId, info->itemCount);
         });
     }
 }
