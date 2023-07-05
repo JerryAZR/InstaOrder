@@ -6,7 +6,9 @@
 #include <QWebEngineLoadingInfo>
 #include <QNetworkCookie>
 #include <QQueue>
+#include <QMap>
 #include "pageLoadCallbacks.h"
+#include "orderinfo.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -20,25 +22,19 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    struct OrderInfo {
-        QString itemId;
-        int itemCount;
-        qint64 orderTimeMSec;
-    };
-
 private:
     Ui::MainWindow *ui;
     QWebEnginePage *_page;
     QQueue<PageLoadCallback*> _loadStartCallbacks;
     QQueue<PageLoadCallback*> _loadFinishCallbacks;
     QWebEngineScript _orderScript;
-    QList<OrderInfo> _plannedOrders;
+    QMap<qint64, OrderInfo*> _plannedOrders;
 
 public slots:
     void log_in();
     void reload();
     void plan_order();
-    void prepare_order(OrderInfo info);
+    void prepare_order(OrderInfo *info);
     void place_order(QString itemID, int itemCount);
     void clear_actions();
 
