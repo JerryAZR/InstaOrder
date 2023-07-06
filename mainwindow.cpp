@@ -9,7 +9,10 @@
 #include <QWebEngineScriptCollection>
 #include <QProgressBar>
 #include <QAbstractButton>
+#include <QListWidget>
+#include <QMessageBox>
 #include <QFile>
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -17,8 +20,16 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     // Member initialization
-        _page = new QWebEnginePage(this);
-//    _page = ui->webView2->page();
+    _page = new QWebEnginePage(this);
+//    qDebug() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+//    qDebug() << "cookie store path:" << _page->profile()->persistentStoragePath();
+//    qDebug() << "Policy is off-the record" << _page->profile()->isOffTheRecord();
+    _keepAliveTimer = new QTimer(this);
+    _keepAliveTimer->setTimerType(Qt::VeryCoarseTimer);
+    _keepAliveTimer->setInterval(1200 * 1000);
+    _keepAliveTimer->setSingleShot(false);
+
+    // UI initialization
     QTime now = QTime::currentTime();
     QDateTime target = QDateTime(QDate::currentDate(), QTime(now.hour(), now.minute()));
     ui->dateTimeEdit->setDateTime(target);
@@ -48,9 +59,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(_page, &QWebEnginePage::loadProgress, ui->progressBar, &QProgressBar::setValue);
     connect(ui->qrCodeReloadBtn, &QAbstractButton::clicked, this, &MainWindow::reload);
     connect(ui->orderBtn, &QAbstractButton::clicked, this, &MainWindow::plan_order);
+    connect(ui->getDetailBtn, &QAbstractButton::clicked, this, &MainWindow::get_item_detail);
+    connect(ui->loginBtn, &QAbstractButton::clicked, this, &MainWindow::log_in);
+    connect(_page->profile()->cookieStore(), &QWebEngineCookieStore::cookieAdded, this, &MainWindow::_on_cookie_add);
+    connect(_keepAliveTimer, &QTimer::timeout, this, &MainWindow::reload);
+    connect(_page, &QWebEnginePage::loadStarted, _keepAliveTimer, [this](){_keepAliveTimer->start();});
 
     // Debug connections
-//    connect(ui->dateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, [](QDateTime time){qDebug() << time;});
+    //    connect(ui->dateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, [](QDateTime time){qDebug() << time;});
     //    connect(_page, &QWebEnginePage::loadStarted, this, &MainWindow::__debug_load_start);
     //    connect(_page, &QWebEnginePage::urlChanged, this, &MainWindow::__debug_url_changed);
     //    connect(_page, &QWebEnginePage::visibleChanged, this, &MainWindow::__debug_visible);
@@ -70,9 +86,35 @@ MainWindow::~MainWindow()
 void MainWindow::log_in()
 {
     // Clear any remaining (expired) actions
-    clear_actions();
     ui->webView->setHtml("");
-    _page->load(QUrl(JD::loginUrl));
+    _page->load(QUrl(JD::homeUrl));
+}
+
+void MainWindow::get_item_detail()
+{
+    QString itemId = ui->itemIDEdit->text();
+    _page->load(QUrl(QString(JD::itemUrl).arg(itemId)));
+}
+
+void MainWindow::load_item_detail()
+{
+    _page->runJavaScript("document.getElementById('spec-img').src", 0, [this](const QVariant &v){
+        ui->webView->setHtml(
+            QString("<img src=\"%1\" style=\"display: block; width: 100%\">").
+            arg(v.toString()));
+    });
+    _page->runJavaScript(QString(JD::itemNameSelector), 0, [this](const QVariant &v) {
+        ui->itemNameLabel->setText(v.toString().trimmed());
+    });
+    _page->runJavaScript(QString(JD::itemPriceSelector), 0, [this](const QVariant &v) {
+        ui->priceLabel->setText(v.toString().remove(' ').remove('\n'));
+    });
+    _page->runJavaScript(QString(JD::itemStockSelector), 0, [this](const QVariant &v) {
+        ui->stockLabel->setText(v.toString().trimmed());
+    });
+    _page->runJavaScript(QString(JD::shopNameSelector), 0, [this](const QVariant &v) {
+        ui->shopNameLabel->setText(v.toString().remove(' ').remove('\n'));
+    });
 }
 
 void MainWindow::reload()
@@ -85,30 +127,50 @@ void MainWindow::plan_order()
     QString itemID = ui->itemIDEdit->text();
     // TODO: If sufficient time remains, add order to the planned queue
     // Otherwise, prepare it immediately;
-    qint64 time = ui->dateTimeEdit->dateTime().toMSecsSinceEpoch() + 1000;
-    OrderInfo *info = new OrderInfo(itemID, 1, time);
-    prepare_order(info);
+    qint64 time = ui->dateTimeEdit->dateTime().toMSecsSinceEpoch();
+    int delay = ui->delaySpinBox->value();
+    int itemCnt = ui->itemCntSpinBox->value();
+    OrderInfo *info = new OrderInfo(itemID, itemCnt, time + delay);
+    qint64 timeDelta = time - QDateTime::currentMSecsSinceEpoch();
+    if (_plannedOrders.contains(time)) {
+        // TODO: Ask if user want to replace
+        delete info;
+        return;
+    }
+    _plannedOrders.insert(time, info);
+    if (timeDelta > 5000) {
+        // More than 5 seconds remaining. Schedule the preparation task to execute later
+        QTimer::singleShot(timeDelta, Qt::VeryCoarseTimer, info, [this, time](){
+            prepare_order(time);
+        });
+    } else {
+        // Less than 5 seconds remaining. Start the preparation immediately;
+        prepare_order(time);
+    }
+    // Create a label for the scheduled order
+    info->listItem = create_list_item(ui->dateTimeEdit->text(), itemID, itemCnt);
+    ui->listWidget->addItem(info->listItem);
+//    ui->tmpLabel->setText(QString("Order %1 planned.").arg(itemID));
 }
 
-void MainWindow::prepare_order(OrderInfo *info)
+void MainWindow::prepare_order(qint64 orderTime)
 {
-    CheckOutCallback * checkout = new CheckOutCallback;
-    // Clear any remaining (expired) actions
-    clear_actions();
-    // Order submit is handled with script injection,
-    // so checkout (getOrderInfo) is the only action to be queued
-    _loadStartCallbacks.enqueue(checkout);
+    // Reset keep-alive timer so we don't get interrupted
+    _keepAliveTimer->start();
     // Check whether the order should be placed now or later
+    OrderInfo * info = _plannedOrders.take(orderTime);
     qint64 targetTime = info->orderTimeMSec;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     if (now >= targetTime) {
         // Order should be placed immediately
         place_order(info->itemId, info->itemCount);
+        delete info;
     } else {
         // Set-up a timer to add item to cart at specified time
         qint64 delay = targetTime - now;
-        QTimer::singleShot(delay, Qt::PreciseTimer, info, [this, info](){
-            this->place_order(info->itemId, info->itemCount);
+        QTimer::singleShot(delay, Qt::PreciseTimer, this, [this, info](){
+            place_order(info->itemId, info->itemCount);
+            delete info;
         });
     }
 }
@@ -118,74 +180,64 @@ void MainWindow::place_order(QString itemID, int itemCount)
     _page->load(QUrl(QString(JD::addItemUrl).arg(itemID).arg(itemCount)));
 }
 
-void MainWindow::clear_actions()
+QListWidgetItem *MainWindow::create_list_item(QString time, QString id, int cnt)
 {
-    // Clear any remaining (expired) actions
-    _loadFinishCallbacks.clear();
-    _loadStartCallbacks.clear();
+    QString itemLabel = QString("[%1] %2 * %3").arg(time, id).arg(cnt);
+    QListWidgetItem * listItem = new QListWidgetItem(itemLabel);
+    return listItem;
 }
 
 void MainWindow::_on_load_start(const QUrl &url)
 {
-    PageLoadCallback * callback;
-    qDebug() << "Started loading page " << _page->title();
-    qDebug() << url;
-
-    if (!_loadStartCallbacks.empty()) {
-        callback = _loadStartCallbacks.head();
-        if (url.matches(callback->url, JD::urlCompareRules) || callback->url.isEmpty()) {
-            callback->run(_page, ui);
-            _loadStartCallbacks.dequeue();
-            delete callback;
-        }
-        //        else {
-        //            qDebug() << "URL mismatch";
-        //            qDebug() << "LHS : " << url;
-        //            qDebug() << "RHS : " << callback->url;
-        //        }
+    // If at cart, go to checkout page
+    if (url.matches(QUrl(JD::addItemUrl), JD::urlCompareRules)) {
+        _page->load(QUrl(JD::checkoutUrl));
     }
 }
 
 void MainWindow::_on_load_finish()
 {
-    PageLoadCallback * callback;
     QUrl currentUrl = _page->url();
-    // Always-active actions
-    qDebug() << "Finished loading page";
-    qDebug() << currentUrl;
 
-    // One-time actions from callback queue
-    if (!_loadFinishCallbacks.empty()) {
-        callback = _loadFinishCallbacks.head();
-        if (currentUrl.matches(callback->url, JD::urlCompareRules) || callback->url.isEmpty()) {
-            callback->run(_page, ui);
-            _loadFinishCallbacks.dequeue();
-            delete callback;
-        }
-        //        else {
-        //            qDebug() << "URL mismatch";
-        //            qDebug() << "LHS : " << currentUrl.adjusted(JD::urlCompareRules);
-        //            qDebug() << "RHS : " << callback->url.adjusted(JD::urlCompareRules);
-        //        }
-    }
     // If at log-in page, always qr code and display in App
     if (currentUrl.matches(QUrl(JD::loginUrl), JD::urlCompareRules)) {
-        QRCodeCallback qrCodeRun;
-        qrCodeRun.run(_page, ui);
+        QString html;
+        html = QString("<img src=\"%1\" style=\"display: block; width: 100%\">").arg(
+            QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch())
+            );
+        ui->webView->setHtml(html);
     }
-    //    else {
-    //        qDebug() << "URL mismatch";
-    //        qDebug() << "LHS : " << currentUrl.adjusted(JD::urlCompareRules);
-    //        qDebug() << "RHS : " << QUrl(JD::loginUrl).adjusted(JD::urlCompareRules);
-    //    }
-    // If at home page, clear all pending tasks
-    if (currentUrl.matches(QUrl(JD::homeUrl), JD::urlCompareRules)) {
-        _loadFinishCallbacks.clear();
-        _loadStartCallbacks.clear();
+
+    // If at item page, get item detail
+    if (currentUrl.matches(QUrl(JD::itemUrl), JD::urlCompareRules)) {
+        load_item_detail();
     }
-    //    else {
-    //        qDebug() << "URL mismatch";
-    //        qDebug() << "LHS : " << currentUrl.adjusted(JD::urlCompareRules);
-    //        qDebug() << "RHS : " << QUrl(JD::homeUrl).adjusted(JD::urlCompareRules);
-    //    }
+    // If at error page, report
+    if (currentUrl.matches(QUrl(JD::error2Url), JD::errorCheckRules)) {
+        qCritical() << "Cannot add item to cart.";
+        QMessageBox::information(this, "Error", currentUrl.toDisplayString());
+    }
+    if (currentUrl.matches(QUrl(JD::error104Url), JD::errorCheckRules)) {
+        qCritical() << "Failed to get checkout page.";
+        QMessageBox::information(this, "Error", currentUrl.toDisplayString());
+    }
+
+    // Always try to update username
+    _page->runJavaScript("document.getElementsByClassName('nickname')[0].textContent", 0, [this](const QVariant &v){
+        this->ui->nicknameLabel->setText(v.toString());
+    });
+}
+
+void MainWindow::_on_cookie_add(const QNetworkCookie &cookie)
+{
+    if (cookie.name().startsWith("__FastJD__")) {
+        qDebug() << cookie.name() << ":" << cookie.value();
+    }
+    if (cookie.name() == QString("__FastJD__status")) {
+        if (cookie.value() == QString("1")) {
+            QMessageBox::information(this, "", QString("下单成功"));
+        } else {
+            QMessageBox::information(this, "", QString("下单失败"));
+        }
+    }
 }

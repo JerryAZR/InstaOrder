@@ -18,7 +18,6 @@ set(PROJECT_SOURCES
         mainwindow.h
         mainwindow.ui
         urls.h
-        pageLoadCallbacks.h
         orderinfo.h
         resources.qrc
 )

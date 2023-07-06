@@ -3,11 +3,10 @@
 
 #include <QMainWindow>
 #include <QWebEnginePage>
-#include <QWebEngineLoadingInfo>
+#include <QWebEngineScript>
 #include <QNetworkCookie>
-#include <QQueue>
 #include <QMap>
-#include "pageLoadCallbacks.h"
+#include <QTimer>
 #include "orderinfo.h"
 
 QT_BEGIN_NAMESPACE
@@ -22,25 +21,28 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    void load_item_detail();
+    void prepare_order(qint64 orderTime);
+    void place_order(QString itemID, int itemCount);
+    QListWidgetItem * create_list_item(QString time, QString id, int cnt);
+
 private:
     Ui::MainWindow *ui;
     QWebEnginePage *_page;
-    QQueue<PageLoadCallback*> _loadStartCallbacks;
-    QQueue<PageLoadCallback*> _loadFinishCallbacks;
     QWebEngineScript _orderScript;
     QMap<qint64, OrderInfo*> _plannedOrders;
+    QTimer *_keepAliveTimer;
 
 public slots:
     void log_in();
+    void get_item_detail();
     void reload();
     void plan_order();
-    void prepare_order(OrderInfo *info);
-    void place_order(QString itemID, int itemCount);
-    void clear_actions();
 
 private slots:
     void _on_load_start(const QUrl &url);
     void _on_load_finish();
+    void _on_cookie_add(const QNetworkCookie &cookie);
 
     void __debug_load_start() {qDebug() << "load_start emmited for " << _page->url();}
     void __debug_url_changed(const QUrl &url) {qDebug() << "url changed to " << url;}

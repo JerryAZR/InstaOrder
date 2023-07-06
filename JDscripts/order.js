@@ -155,13 +155,10 @@ jQuery.ajax({
     withCredentials: true //允许跨域带Cookie
   },
   success: function (result) {
-    window.alert("Success");
-    console.log("params:");
-    console.log(param);
+    document.cookie = "__FastJD__params=" + param;
+    document.cookie = "__FastJD__status=1";
   },
   error: function (error) {
-    $("#submit_loading").remove();
-    $('#ignorePriceChange').val(0);
-    window.alert("亲爱的用户请不要频繁点击, 请稍后重试...");
+    document.cookie = "__FastJD__status=0";
   }
 });
