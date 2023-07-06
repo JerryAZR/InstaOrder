@@ -40,7 +40,7 @@ public:
 class LogInCallback : public PageLoadCallback
 {
 public:
-    LogInCallback(QUrl url = QUrl(JD::homeUrl)) : PageLoadCallback(url) {}
+    LogInCallback(QUrl url = QUrl(JD::mainUrl)) : PageLoadCallback(url) {}
     virtual ~LogInCallback() {}
     virtual void run(QWebEnginePage * page = nullptr, Ui::MainWindow * ui = nullptr) {
         qDebug() << "Logged in";
@@ -80,6 +80,32 @@ public:
     virtual void run(QWebEnginePage * page = nullptr, Ui::MainWindow * ui = nullptr) {
         page->runJavaScript(jQuery + order_js);
         qDebug() << "Submit Order";
+    }
+};
+
+class ItemDetailCallback : public PageLoadCallback
+{
+public:
+    ItemDetailCallback(QUrl url = QUrl(JD::itemUrl)) : PageLoadCallback(url) {}
+    virtual ~ItemDetailCallback() {}
+    virtual void run(QWebEnginePage * page = nullptr, Ui::MainWindow * ui = nullptr) {
+        page->runJavaScript("document.getElementById('spec-img').src", 0, [ui](const QVariant &v){
+            ui->webView->setHtml(
+                QString("<img src=\"%1\" style=\"display: block; width: 100%\">").
+                arg(v.toString()));
+        });
+        page->runJavaScript(QString(JD::itemNameSelector), 0, [ui](const QVariant &v) {
+            ui->itemNameLabel->setText(v.toString().trimmed());
+        });
+        page->runJavaScript(QString(JD::itemPriceSelector), 0, [ui](const QVariant &v) {
+            ui->priceLabel->setText(v.toString().remove(' ').remove('\n'));
+        });
+        page->runJavaScript(QString(JD::itemStockSelector), 0, [ui](const QVariant &v) {
+            ui->stockLabel->setText(v.toString().trimmed());
+        });
+        page->runJavaScript(QString(JD::shopNameSelector), 0, [ui](const QVariant &v) {
+            ui->shopNameLabel->setText(v.toString().remove(' ').remove('\n'));
+        });
     }
 };
 
