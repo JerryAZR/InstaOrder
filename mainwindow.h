@@ -2,12 +2,16 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSharedPointer>
 #include <QWebEnginePage>
 #include <QWebEngineScript>
 #include <QNetworkCookie>
+#include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
 #include <QMap>
 #include <QTimer>
 #include "orderinfo.h"
+#include "jdhelper.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -24,6 +28,8 @@ public:
     void load_item_detail();
     void prepare_order(qint64 orderTime);
     void place_order(QString itemID, int itemCount);
+    void request_checkout();
+    void request_submit_order(QNetworkReply *reply);
     QListWidgetItem * create_list_item(QString time, QString id, int cnt);
 
 private:
@@ -31,7 +37,11 @@ private:
     QWebEnginePage *_page;
     QWebEngineScript _orderScript;
     QMap<qint64, OrderInfo*> _plannedOrders;
-    QTimer *_keepAliveTimer;
+    QTimer * _keepAliveTimer;
+    QNetworkAccessManager * _accessManager;
+    QNetworkCookieJar * _cookieJar;
+    QString _userAgent;
+    JDHelper helper;
 
 public slots:
     void log_in();
