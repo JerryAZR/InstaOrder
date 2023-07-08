@@ -7,12 +7,14 @@
 #include <QWebEngineCookieStore>
 #include <QWebEngineProfile>
 #include <QWebEngineScriptCollection>
+#include <QNetworkReply>
 #include <QProgressBar>
 #include <QAbstractButton>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QFile>
 #include <QStandardPaths>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -21,13 +23,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     // Member initialization
     _page = new QWebEnginePage(this);
-//    qDebug() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-//    qDebug() << "cookie store path:" << _page->profile()->persistentStoragePath();
-//    qDebug() << "Policy is off-the record" << _page->profile()->isOffTheRecord();
+    //    qDebug() << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    //    qDebug() << "cookie store path:" << _page->profile()->persistentStoragePath();
+    //    qDebug() << "Policy is off-the record" << _page->profile()->isOffTheRecord();
     _keepAliveTimer = new QTimer(this);
     _keepAliveTimer->setTimerType(Qt::VeryCoarseTimer);
     _keepAliveTimer->setInterval(1200 * 1000);
     _keepAliveTimer->setSingleShot(false);
+
+    _accessManager = new QNetworkAccessManager(this);
+    _cookieJar = _accessManager->cookieJar();
+    _userAgent = _page->profile()->httpUserAgent();
 
     // UI initialization
     QTime now = QTime::currentTime();
@@ -74,8 +80,15 @@ MainWindow::MainWindow(QWidget *parent)
     //    connect(_webcpp, &WebCpp::documentReady, this, &MainWindow::__debug_doc_ready);
     //    connect(_webcpp, &WebCpp::documentStart, this, &MainWindow::__debug_doc_start);
 
+
     // First task
-    log_in();
+//    log_in();
+    connect(&helper, &OrderHelper::qrCodeReady, this, [this](QPixmap * img){
+        qDebug() << "Trying to set img";
+        ui->qrCodeLabel->setPixmap(*img);
+    });
+
+    helper.log_in();
 }
 
 MainWindow::~MainWindow()
@@ -150,7 +163,7 @@ void MainWindow::plan_order()
     // Create a label for the scheduled order
     info->listItem = create_list_item(ui->dateTimeEdit->text(), itemID, itemCnt);
     ui->listWidget->addItem(info->listItem);
-//    ui->tmpLabel->setText(QString("Order %1 planned.").arg(itemID));
+    //    ui->tmpLabel->setText(QString("Order %1 planned.").arg(itemID));
 }
 
 void MainWindow::prepare_order(qint64 orderTime)
@@ -177,7 +190,45 @@ void MainWindow::prepare_order(qint64 orderTime)
 
 void MainWindow::place_order(QString itemID, int itemCount)
 {
-    _page->load(QUrl(QString(JD::addItemUrl).arg(itemID).arg(itemCount)));
+    helper.buy_item(itemID, itemCount);
+}
+
+void MainWindow::request_checkout()
+{
+    QNetworkRequest request((QUrl(JD::checkoutUrl)));
+    request.setHeader(QNetworkRequest::UserAgentHeader, _userAgent);
+    request.setRawHeader("Referer", "https://cart.jd.com/");
+    QNetworkReply * reply = _accessManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply](){
+        if (reply->url().matches(QUrl(JD::checkoutUrl), JD::fileCompareRules)) {
+            request_submit_order(reply);
+        } else {
+            qDebug() << "Did not get checkout page. Got this url instead:";
+            qDebug() << "reply url:" << reply->url();
+            reply->close();
+            reply->deleteLater();
+        }
+    });
+}
+
+void MainWindow::request_submit_order(QNetworkReply *reply)
+{
+    static const QRegularExpression regex("<input[^<>]+id=\"([^<>\"]+)\"[^<>]+value=\"([^<>\"]+)\"[^<>]*>");
+    qDebug() << "one step ahead!";
+    QByteArray data = reply->readAll();
+    QRegularExpressionMatchIterator iter = regex.globalMatch(data);
+    while (iter.hasNext()) {
+        QRegularExpressionMatch match = iter.next();
+        qDebug() << match.captured(1) << match.captured(2);
+    }
+    QFile checkoutPage;
+    checkoutPage.setFileName("checkout.html");
+    checkoutPage.open(QFile::WriteOnly);
+    checkoutPage.write(data);
+    checkoutPage.close();
+
+    reply->close();
+    reply->deleteLater();
 }
 
 QListWidgetItem *MainWindow::create_list_item(QString time, QString id, int cnt)
@@ -190,7 +241,7 @@ QListWidgetItem *MainWindow::create_list_item(QString time, QString id, int cnt)
 void MainWindow::_on_load_start(const QUrl &url)
 {
     // If at cart, go to checkout page
-    if (url.matches(QUrl(JD::addItemUrl), JD::urlCompareRules)) {
+    if (url.matches(QUrl(JD::addItemUrl), JD::domainCompareRules)) {
         _page->load(QUrl(JD::checkoutUrl));
     }
 }
@@ -200,7 +251,7 @@ void MainWindow::_on_load_finish()
     QUrl currentUrl = _page->url();
 
     // If at log-in page, always qr code and display in App
-    if (currentUrl.matches(QUrl(JD::loginUrl), JD::urlCompareRules)) {
+    if (currentUrl.matches(QUrl(JD::loginUrl), JD::domainCompareRules)) {
         QString html;
         html = QString("<img src=\"%1\" style=\"display: block; width: 100%\">").arg(
             QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch())
@@ -209,15 +260,15 @@ void MainWindow::_on_load_finish()
     }
 
     // If at item page, get item detail
-    if (currentUrl.matches(QUrl(JD::itemUrl), JD::urlCompareRules)) {
+    if (currentUrl.matches(QUrl(JD::itemUrl), JD::domainCompareRules)) {
         load_item_detail();
     }
     // If at error page, report
-    if (currentUrl.matches(QUrl(JD::error2Url), JD::errorCheckRules)) {
+    if (currentUrl.matches(QUrl(JD::error2Url), JD::fileCompareRules)) {
         qCritical() << "Cannot add item to cart.";
         QMessageBox::information(this, "Error", currentUrl.toDisplayString());
     }
-    if (currentUrl.matches(QUrl(JD::error104Url), JD::errorCheckRules)) {
+    if (currentUrl.matches(QUrl(JD::error104Url), JD::fileCompareRules)) {
         qCritical() << "Failed to get checkout page.";
         QMessageBox::information(this, "Error", currentUrl.toDisplayString());
     }
@@ -232,6 +283,9 @@ void MainWindow::_on_cookie_add(const QNetworkCookie &cookie)
 {
     if (cookie.name().startsWith("__FastJD__")) {
         qDebug() << cookie.name() << ":" << cookie.value();
+    } else {
+        // Sync cookie between webengine and network manager
+        _cookieJar->insertCookie(cookie);
     }
     if (cookie.name() == QString("__FastJD__status")) {
         if (cookie.value() == QString("1")) {

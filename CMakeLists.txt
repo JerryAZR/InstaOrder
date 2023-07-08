@@ -19,6 +19,9 @@ set(PROJECT_SOURCES
         mainwindow.ui
         urls.h
         orderinfo.h
+        orderhelper.h
+        jdhelper.h jdhelper.cpp
+        qrcodedialog.h qrcodedialog.cpp qrcodedialog.ui
         resources.qrc
 )
 
