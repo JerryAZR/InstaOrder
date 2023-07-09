@@ -239,6 +239,7 @@ void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
         if (cookie.name() == QString("__FastJD__status")) {
             if (cookie.value() == QString("1")) {
                 emit orderFinished(true);
+                // FIXME: program may still report success even if submission fails
             } else {
                 emit orderFinished(false);
             }
