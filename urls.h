@@ -10,6 +10,7 @@ static const char statusUrl[]   = "https://qr.m.jd.com/check?callback=jQuery%1&a
 static const char ticketUrl[]   = "https://passport.jd.com/uc/qrCodeTicketValidation?t=%1";
 static const char mainUrl[]     = "https://www.jd.com/";
 static const char homeUrl[]     = "https://home.jd.com/";
+static const char searchUrl[]   = "https://search.jd.com/Search?keyword=%1&enc=utf-8";
 static const char itemUrl[]     = "https://item.jd.com/%1.html";
 static const char qrCodeSrc[]   = "https://qr.m.jd.com/show?appid=133&size=147&t=%1&sa=1";
 static const char addItemUrl[]  = "https://cart.jd.com/gate.action?pid=%1&pcount=%2&ptype=1";

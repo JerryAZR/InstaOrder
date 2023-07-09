@@ -13,7 +13,7 @@ public:
     QListWidgetItem * listItem;
     OrderInfo(QString id = "", int cnt = 0, qint64 msec = 0) :
         itemId(id), itemCount(cnt), orderTimeMSec(msec), listItem(nullptr) {}
-    ~OrderInfo() {}
+    ~OrderInfo() {if (listItem) delete listItem;}
 };
 
 #endif // ORDERINFO_H

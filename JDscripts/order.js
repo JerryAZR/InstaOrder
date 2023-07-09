@@ -145,6 +145,9 @@ var limitUserFlag = $("#limitUserFlag").val()
 param += "&submitOrderParam.giftRemove=" + removeGiftType;
 param += "&submitOrderParam.limitUserFlag=" + limitUserFlag;
 
+document.cookie = "__FastJD__params=" + param;
+document.cookie = "__FastJD__actionUrl=" + actionUrl;
+
 jQuery.ajax({
   type: "POST",
   dataType: "json",
@@ -155,7 +158,6 @@ jQuery.ajax({
     withCredentials: true //允许跨域带Cookie
   },
   success: function (result) {
-    document.cookie = "__FastJD__params=" + param;
     document.cookie = "__FastJD__status=1";
   },
   error: function (error) {
