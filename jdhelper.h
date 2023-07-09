@@ -4,9 +4,11 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QWebEnginePage>
+#include <QWebEngineScript>
 #include <QTimer>
 #include <QMap>
 #include <QSet>
+#include <QRegularExpression>
 #include "orderhelper.h"
 #include "qrcodedialog.h"
 
@@ -25,37 +27,36 @@ public:
                                                    "giftRemoveType", "limitUserFlag"};
 
     QNetworkAccessManager accessManager;
-    QWebEnginePage *page;
+    QWebEnginePage *page;       // For generic browsing
+    QWebEnginePage *orderPage;  // For placing orders only
     QrCodeDialog *qrCodeView;
-    QTimer statusChecker;
-    QMap<QString, QString> cookieJar;
-    QSet<QString> orderParamNames;
-    QMap<QString, QString> orderParams;
+    QWebEngineScript orderScript;
+    QTimer *keepAliveTimer;
 
-    explicit JDHelper(QObject *parent = nullptr);
-    ~JDHelper() {delete qrCodeView;}
+    explicit JDHelper(QWidget *parent = nullptr);
+    ~JDHelper() {/* Every object has a parent. Nothing to delete manually. */}
 
     // OrderHelper interface
 public:
     void buy_item(QString itemId, int itemCnt);
     void log_in();
-    void get_item_detail(QString itemId);
+    void get_item_detail(const QString &itemId);
 
-    void do_log_in();
-    void validate_ticket(QString ticket);
-    void save_cookies(const QUrl &url);
-    void request_checkout();
-    void request_submit_order(QNetworkReply *reply);
-    QByteArray combine_params();
+    void analyze_home_page(const QString &html);
+    void analyze_item_page(const QString &html);
+    void request_item_detail(const QString &itemId);
     QNetworkReply * browserGet(QNetworkRequest& request);
     QNetworkReply * browserPost(QNetworkRequest& request, QByteArray& payload);
-    QDialog *showWidget(QWidget *widget);
 
 public slots:
-    void check_status();
-    void add_cookie(const QNetworkCookie &cookie);
+    void _on_cookie_add(const QNetworkCookie &cookie);
     void _on_page_load();
     void _on_url_change(const QUrl &url);
+    void _order_next_step(const QUrl &url);
+    void _reload();
+
+signals:
+    void pageReady();
 };
 
 #endif // JDHELPER_H

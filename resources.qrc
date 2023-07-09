@@ -3,4 +3,7 @@
         <file>JDscripts/order.js</file>
         <file>common/jquery-3.7.0.min.js</file>
     </qresource>
+    <qresource prefix="/misc">
+        <file>common/spinner.html</file>
+    </qresource>
 </RCC>
