@@ -21,7 +21,7 @@ jobs:
           target: 'desktop'
 
       - name: Configure Project
-        run: qt-cmake -S ./src -B ./build
+        run: qt-cmake -S . -B ./build
 
       - name: Build Project
         working-directory: ./build
