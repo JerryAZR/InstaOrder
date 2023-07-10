@@ -47,6 +47,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(helper, &OrderHelper::imageSrcReady, this, &MainWindow::set_img_src);
     connect(helper, &OrderHelper::loggedIn, ui->nicknameLabel, &QLabel::setText);
     connect(helper, &OrderHelper::loggedIn, this, [this](){ui->orderBtn->setDisabled(false);});
+    // Countdown timer
+    connect(ui->millisSelect, &QCheckBox::clicked, ui->countdown, &CountdownWidget::setShowMillis);
+    connect(ui->countdownSelect, &QCheckBox::clicked, ui->countdown, &CountdownWidget::toggleDisplay);
     // First task
     log_in();
 }
@@ -102,6 +105,7 @@ void MainWindow::plan_order()
     // Create a label for the scheduled order
     info->listItem = create_list_item(ui->dateTimeEdit->text(), itemId, itemCnt);
     ui->listWidget->addItem(info->listItem);
+    update_countdown();
     //    ui->tmpLabel->setText(QString("Order %1 planned.").arg(itemID));
 }
 
@@ -147,19 +151,19 @@ void MainWindow::manage_order_list(QListWidgetItem *item)
 void MainWindow::prepare_order(qint64 orderTime)
 {
     // Check whether the order should be placed now or later
-    OrderInfo * info = _plannedOrders.take(orderTime);
+    OrderInfo * info = _plannedOrders.value(orderTime);
     qint64 targetTime = info->orderTimeMSec;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     if (now >= targetTime) {
         // Order should be placed immediately
         place_order(info->itemId, info->itemCount);
-        info->deleteLater();
+        unplan_order(orderTime);
     } else {
         // Set-up a timer to add item to cart at specified time
         qint64 delay = targetTime - now;
-        QTimer::singleShot(delay, Qt::PreciseTimer, this, [this, info](){
+        QTimer::singleShot(delay, Qt::PreciseTimer, this, [this, info, orderTime](){
             place_order(info->itemId, info->itemCount);
-            info->deleteLater();
+            unplan_order(orderTime);
         });
     }
 }
@@ -174,6 +178,7 @@ void MainWindow::unplan_order(qint64 key)
 {
     if (_plannedOrders.contains(key)) {
         _plannedOrders.take(key)->deleteLater();
+        update_countdown();
     } else {
         qWarning() << "Target" << key << "does not seem to be a planned order";
     }
@@ -188,6 +193,17 @@ void MainWindow::unplan_order(QListWidgetItem *item)
         unplan_order(datetime.toMSecsSinceEpoch());
     } else {
         qDebug() << "Got an invalid DateTime string: " << time;
+    }
+}
+
+void MainWindow::update_countdown()
+{
+    if (_plannedOrders.isEmpty()) {
+        ui->countdown->stop();
+    } else {
+        qint64 millis = _plannedOrders.constBegin().key();
+        ui->countdown->setTarget(QDateTime::fromMSecsSinceEpoch(millis));
+        ui->countdown->start();
     }
 }
 

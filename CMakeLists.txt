@@ -22,6 +22,7 @@ set(PROJECT_SOURCES
         orderhelper.h
         jdhelper.h jdhelper.cpp
         qrcodedialog.h qrcodedialog.cpp qrcodedialog.ui
+        countdownwidget.h countdownwidget.cpp countdownwidget.ui
         resources.qrc
 )
 

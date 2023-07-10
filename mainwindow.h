@@ -24,6 +24,7 @@ public:
     void place_order(QString itemID, int itemCount);
     void unplan_order(qint64 key);
     void unplan_order(QListWidgetItem *item);
+    void update_countdown();
     QListWidgetItem * create_list_item(QString time, QString id, int cnt);
 
 private:
