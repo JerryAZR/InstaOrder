@@ -21,7 +21,7 @@ jobs:
           target: 'desktop'
           arch: 'win64_msvc2019_64'
           install-deps: 'true'
-          modules: 'qtwebengine'
+          modules: 'qtwebengine qtwebchannel'
 
       - name: Configure Project
         run: qt-cmake -S . -B ./build
