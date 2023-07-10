@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>请扫码登录</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
