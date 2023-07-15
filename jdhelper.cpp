@@ -17,9 +17,10 @@ JDHelper::JDHelper(QWidget *parent)
     : OrderHelper{parent}
 {
     qrCodeView = new QrCodeDialog(parent);
-
     page = new QWebEnginePage(parent);
     orderPage = new QWebEnginePage(parent);
+    config = new JDOrderConfig(parent);
+
 
     // Javascript setup
     QFile jsFile;
@@ -65,10 +66,11 @@ JDHelper::JDHelper(QWidget *parent)
     connect(keepAliveTimer, &QTimer::timeout, this, &JDHelper::_reload);
     connect(page, &QWebEnginePage::loadStarted, keepAliveTimer, QOverload<>::of(&QTimer::start));
     connect(orderPage, &QWebEnginePage::loadStarted, keepAliveTimer, QOverload<>::of(&QTimer::start));
-
     // Log-in QR code display control
     connect(qrCodeView, &QDialog::accepted, this, &JDHelper::log_in);
     connect(this, &JDHelper::loggedIn, qrCodeView, &QDialog::hide);
+    // Mode configuration
+    connect(config, &QDialog::accepted, this, &JDHelper::_update_manual_config);
 }
 
 void JDHelper::buy_item(QString itemId, int itemCnt)
@@ -127,8 +129,28 @@ void JDHelper::_order_next_step(const QUrl &url)
     if (url.matches(QUrl(JD::addItemUrl), JD::domainCompareRules)) {
         orderPage->load(QUrl(JD::checkoutUrl));
     }
-    // If at checkout page, do nothing (JS will auto submit order)
-    else if (url.matches(QUrl(JD::checkoutUrl), JD::fileCompareRules)) {}
+    // If at checkout page, do nothing in auto mode (JS will auto submit order)
+    else if (url.matches(QUrl(JD::checkoutUrl), JD::fileCompareRules)) {
+        if (advancedMode) {
+            // Manual mode
+            qint64 msecs = QDateTime::currentMSecsSinceEpoch();
+            QString url = QString(JD::submitUrl).arg(msecs).arg(uuid);
+            QString payload = QString(JD::submitPayload1) + QString(JD::submitPayload2).arg(eid, fp);
+            QNetworkRequest request;
+            request.setUrl(url);
+            request.setRawHeader("Referer", "https://trade.jd.com/");
+            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+            QNetworkReply * postReply = browserPost(request, payload.toLocal8Bit());
+            connect(postReply, &QNetworkReply::finished, this, [postReply](){
+                qDebug() << "Got reply for post";
+                qDebug() << "Status code: " << postReply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+                qDebug() << postReply->url();
+                qDebug() << postReply->readAll();
+            });
+            qDebug() << "Post url: " << request.url();
+            qDebug() << "Post data: " << payload;
+        }
+    }
     // 抱歉!  您访问的页面失联啦...
     else if (url.matches(QUrl(JD::error2Url), JD::fileCompareRules)) {
         emit orderFinished(false);
@@ -152,11 +174,34 @@ void JDHelper::_reload()
     page->triggerAction(QWebEnginePage::Reload);
 }
 
+void JDHelper::_update_manual_config()
+{
+    // 1. Update order mode
+    advancedMode = config->manualMode();
+    if (advancedMode) {
+        // Get required params
+        uuid = config->getUuid();
+        eid = config->getEid();
+        fp = config->getFp();
+        // Remove auto-post script
+        orderPage->scripts().remove(orderScript);
+        qInfo() << "Switched to manual mode. Auto-post disabled.";
+    } else if (!orderPage->scripts().contains(orderScript)) {
+        orderPage->scripts().insert(orderScript);
+        qInfo() << "Switched to auto mode.";
+    }
+}
+
 void JDHelper::get_item_detail(const QString &itemId)
 {
     QUrl url(QString(JD::itemUrl).arg(itemId));
     page->load(url);
     request_item_detail(itemId);
+}
+
+void JDHelper::show_config()
+{
+    config->show();
 }
 
 void JDHelper::analyze_home_page(const QString &html)
@@ -223,7 +268,7 @@ QNetworkReply *JDHelper::browserGet(QNetworkRequest &request)
     return accessManager.get(request);
 }
 
-QNetworkReply *JDHelper::browserPost(QNetworkRequest &request, QByteArray &payload)
+QNetworkReply *JDHelper::browserPost(QNetworkRequest &request, const QByteArray &payload)
 {
     request.setHeader(QNetworkRequest::UserAgentHeader, USER_AGENT);
     request.setRawHeader("sec-ch-ua", SEC_CH_UA);
@@ -235,6 +280,7 @@ QNetworkReply *JDHelper::browserPost(QNetworkRequest &request, QByteArray &paylo
 void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
 {
     if (cookie.name().startsWith("__FastJD__")) {
+        // These are app-defined cookies
         qDebug() << cookie.name() << ":" << cookie.value();
         if (cookie.name() == QString("__FastJD__status")) {
             if (cookie.value() == QString("1")) {
@@ -249,5 +295,14 @@ void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
             emit pageReady();
         }
         orderPage->profile()->cookieStore()->deleteCookie(cookie);
+    } else {
+        // These are the actual JD cookies
+        accessManager.cookieJar()->insertCookie(cookie);
+
+        if (!advancedMode) {
+            if (cookie.name() == QString("__jda")) {
+                config->setUuid(cookie.value());
+            }
+        }
     }
 }

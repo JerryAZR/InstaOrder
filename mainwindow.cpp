@@ -35,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->orderBtn, &QAbstractButton::clicked, this, &MainWindow::plan_order);
     connect(ui->getDetailBtn, &QAbstractButton::clicked, this, &MainWindow::get_item_detail);
     connect(ui->loginBtn, &QAbstractButton::clicked, this, &MainWindow::log_in);
+    connect(ui->cfgButton, &QAbstractButton::clicked, helper, &OrderHelper::show_config);
     // Planned order management
     connect(ui->listWidget, &QListWidget::itemClicked, this, &MainWindow::manage_order_list);
     // Order helper signals

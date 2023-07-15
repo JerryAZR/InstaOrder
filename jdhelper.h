@@ -9,6 +9,7 @@
 #include <QMap>
 #include <QSet>
 #include <QRegularExpression>
+#include "jdorderconfig.h"
 #include "orderhelper.h"
 #include "qrcodedialog.h"
 
@@ -32,6 +33,12 @@ public:
     QrCodeDialog *qrCodeView;
     QWebEngineScript orderScript;
     QTimer *keepAliveTimer;
+    // Manual mode parameters
+    JDOrderConfig *config;
+    bool advancedMode = false;
+    QString uuid;
+    QString eid;
+    QString fp;
 
     explicit JDHelper(QWidget *parent = nullptr);
     ~JDHelper() {/* Every object has a parent. Nothing to delete manually. */}
@@ -41,12 +48,14 @@ public:
     void buy_item(QString itemId, int itemCnt);
     void log_in();
     void get_item_detail(const QString &itemId);
+    void show_config();
+
 
     void analyze_home_page(const QString &html);
     void analyze_item_page(const QString &html);
     void request_item_detail(const QString &itemId);
     QNetworkReply * browserGet(QNetworkRequest& request);
-    QNetworkReply * browserPost(QNetworkRequest& request, QByteArray& payload);
+    QNetworkReply * browserPost(QNetworkRequest& request, const QByteArray& payload);
 
 public slots:
     void _on_cookie_add(const QNetworkCookie &cookie);
@@ -54,6 +63,7 @@ public slots:
     void _on_url_change(const QUrl &url);
     void _order_next_step(const QUrl &url);
     void _reload();
+    void _update_manual_config();
 
 signals:
     void pageReady();

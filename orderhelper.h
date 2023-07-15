@@ -11,7 +11,8 @@ public:
     explicit OrderHelper(QObject *parent = nullptr) {};
     virtual void buy_item(QString itemId, int itemCnt) = 0;
     virtual void log_in() = 0;
-    virtual void get_item_detail(const QString &itemId) = 0;
+    virtual void get_item_detail(const QString &itemId) {};
+    virtual void show_config() {};
 
 signals:
     // item info

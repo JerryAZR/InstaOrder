@@ -23,6 +23,7 @@ set(PROJECT_SOURCES
         jdhelper.h jdhelper.cpp
         qrcodedialog.h qrcodedialog.cpp qrcodedialog.ui
         countdownwidget.h countdownwidget.cpp countdownwidget.ui
+        jdorderconfig.h jdorderconfig.cpp jdorderconfig.ui
         resources.qrc
 )
 
