@@ -155,10 +155,10 @@ jQuery.ajax({
     withCredentials: true //允许跨域带Cookie
   },
   success: function (result) {
-    document.cookie = "__FastJD__status=1";
+    document.cookie = "__FastJD__status=0";
   },
   error: function (error) {
-    document.cookie = "__FastJD__status=0";
+    document.cookie = "__FastJD__status=-1";
   }
 });
 

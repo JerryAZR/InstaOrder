@@ -26,6 +26,7 @@ public:
     void setUuid(const QString &newUuid);
     void setEid(const QString &newEid);
     void setFp(const QString &newFp);
+    void setManualMode(bool manual);
 
 private:
     Ui::JDOrderConfig *ui;
