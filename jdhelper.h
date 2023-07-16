@@ -6,6 +6,7 @@
 #include <QWebEnginePage>
 #include <QWebEngineScript>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QMap>
 #include <QSet>
 #include <QRegularExpression>
@@ -33,6 +34,7 @@ public:
     QrCodeDialog *qrCodeView;
     QWebEngineScript orderScript;
     QTimer *keepAliveTimer;
+    QElapsedTimer perfTimer;    // For performance profiling
     // Manual mode parameters
     JDOrderConfig *config;
     bool advancedMode = false;
@@ -54,8 +56,11 @@ public:
     void analyze_home_page(const QString &html);
     void analyze_item_page(const QString &html);
     void request_item_detail(const QString &itemId);
+    void request_checkout();
+    void request_submit_order();
     QNetworkReply * browserGet(QNetworkRequest& request);
     QNetworkReply * browserPost(QNetworkRequest& request, const QByteArray& payload);
+    void handle_return_code(int code);
 
 public slots:
     void _on_cookie_add(const QNetworkCookie &cookie);
@@ -63,7 +68,7 @@ public slots:
     void _on_url_change(const QUrl &url);
     void _order_next_step(const QUrl &url);
     void _reload();
-    void _update_manual_config();
+    void _update_manual_config(int result);
 
 signals:
     void pageReady();

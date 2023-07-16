@@ -47,3 +47,9 @@ void JDOrderConfig::setFp(const QString &newFp)
 {
     ui->fpEdit->setText(newFp);
 }
+
+void JDOrderConfig::setManualMode(bool manual)
+{
+    ui->advModeSel->setChecked(manual);
+    ui->autoModeSel->setChecked(!manual);
+}
