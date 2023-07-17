@@ -1,11 +1,10 @@
 #include "jdhelper.h"
-#include "qwebenginescriptcollection.h"
 #include "urls.h"
-//#include <QRandomGenerator>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
 #include <QWebEngineProfile>
 #include <QWebEngineCookieStore>
+#include <QWebEngineScriptCollection>
 #include <QDialog>
 #include <QDateTime>
 #include <QFile>
@@ -73,6 +72,19 @@ JDHelper::JDHelper(QWidget *parent)
     connect(config, &QDialog::finished, this, &JDHelper::_update_manual_config);
 }
 
+/**
+ * @brief JDHelper::buy_item
+ * @param itemId
+ * @param itemCnt
+ *
+ * If in advanced mode, send an HTTP GET request to add selected item to cart,
+ * then set-up a callback to checkout after JD server replies.
+ *
+ * If in auto mode, load the link that adds the selected item to cart.
+ * The following steps are handled elsewhere:
+ * - checkout is performed in function _order_next_step
+ * - submission is handled by the orderScript added to page script collection.
+ */
 void JDHelper::buy_item(QString itemId, int itemCnt)
 {
     perfTimer.start();
@@ -98,6 +110,11 @@ void JDHelper::buy_item(QString itemId, int itemCnt)
     }
 }
 
+/**
+ * @brief JDHelper::_on_page_load
+ *
+ * Preforms various actions on the loaded page, depending on its url.
+ */
 void JDHelper::_on_page_load()
 {
     qDebug() << "Page finished loading";
@@ -127,6 +144,13 @@ void JDHelper::_on_page_load()
     }
 }
 
+/**
+ * @brief JDHelper::_on_url_change
+ * @param url
+ *
+ * Preforms various actions on the current page (before it is fully loaded).
+ * Action depends on its url.
+ */
 void JDHelper::_on_url_change(const QUrl &url)
 {
     if (url.matches(QUrl(JD::homeUrl), JD::domainCompareRules)) {
@@ -142,6 +166,14 @@ void JDHelper::_on_url_change(const QUrl &url)
     }
 }
 
+/**
+ * @brief JDHelper::_order_next_step
+ * @param url
+ *
+ * Similar to _on_url_change, but only handles order-related stuff
+ * Specifically, it loads the checkout page once the item is added to cart
+ * and reports error (order failure) if an error page is seen.
+ */
 void JDHelper::_order_next_step(const QUrl &url)
 {
     // If at cart, go to checkout page
@@ -173,6 +205,12 @@ void JDHelper::_reload()
     page->triggerAction(QWebEnginePage::Reload);
 }
 
+/**
+ * @brief JDHelper::_update_manual_config
+ * @param result
+ *
+ * Update parameters used in manual mode with user input.
+ */
 void JDHelper::_update_manual_config(int result)
 {
     if (result == QDialog::Accepted) {
@@ -193,6 +231,13 @@ void JDHelper::_update_manual_config(int result)
     }
 }
 
+/**
+ * @brief JDHelper::get_item_detail
+ * @param itemId
+ *
+ * Get item name and image with a raw HTTP GET request (fast),
+ * then wait for QWebEngine to load the full item page to get the other info.
+ */
 void JDHelper::get_item_detail(const QString &itemId)
 {
     QUrl url(QString(JD::itemUrl).arg(itemId));
@@ -200,11 +245,22 @@ void JDHelper::get_item_detail(const QString &itemId)
     request_item_detail(itemId);
 }
 
+/**
+ * @brief JDHelper::show_config
+ *
+ * Show the configuration window.
+ */
 void JDHelper::show_config()
 {
     config->show();
 }
 
+/**
+ * @brief JDHelper::analyze_home_page
+ * @param html
+ *
+ * Extract username with QRegularExpression from home.jd.com html document.
+ */
 void JDHelper::analyze_home_page(const QString &html)
 {
     static const QRegularExpression usernameRegex("<div class=\"user\">[\\s]*<a href=[^<>]+>([^<>]*)");
@@ -213,6 +269,12 @@ void JDHelper::analyze_home_page(const QString &html)
     if (match.hasMatch()) emit loggedIn(match.captured(1));
 }
 
+/**
+ * @brief JDHelper::analyze_item_page
+ * @param html
+ *
+ * Get item name, price, image, stock status, and shop name from item page.
+ */
 void JDHelper::analyze_item_page(const QString &html)
 {
     // Item name: use title
@@ -248,13 +310,15 @@ void JDHelper::request_item_detail(const QString &itemId)
     connect(reply, &QNetworkReply::finished, this, [this, reply](){
         QByteArray html = reply->readAll();
         analyze_item_page(html);
-        QFile outfile("item_test.html");
-        outfile.open(QFile::WriteOnly);
-        outfile.write(html);
-        outfile.close();
     });
 }
 
+/**
+ * @brief JDHelper::request_checkout
+ *
+ * Checkout with an HTTP GET request and set up a callback to submit order
+ * after JD server respondes.
+ */
 void JDHelper::request_checkout()
 {
     QNetworkRequest request((QUrl(JD::checkoutUrl)));
@@ -272,6 +336,12 @@ void JDHelper::request_checkout()
     });
 }
 
+/**
+ * @brief JDHelper::request_submit_order
+ *
+ * Construct an order submission POST request with data provided by user ansd
+ * set-up a callback to report order status.
+ */
 void JDHelper::request_submit_order()
 {
     // Manual mode
@@ -297,6 +367,11 @@ void JDHelper::request_submit_order()
     qDebug() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
 }
 
+/**
+ * @brief JDHelper::log_in
+ *
+ * Log-in by loading home.jd.com.
+ */
 void JDHelper::log_in()
 {
     page->load(QUrl(JD::homeUrl));
@@ -332,6 +407,12 @@ void JDHelper::handle_return_code(int code)
     }
 }
 
+/**
+ * @brief JDHelper::_on_cookie_add
+ * @param cookie
+ *
+ * Copy cookies in QWebEngine to QNetworkAccessManager
+ */
 void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
 {
     if (cookie.name().startsWith("__FastJD__")) {

@@ -53,6 +53,12 @@ void CountdownWidget::stop()
     ui->lcdNumber->display(QString("--:--:--.--"));
 }
 
+/**
+ * @brief CountdownWidget::update
+ *
+ * Calculate the gap between current time and target time,
+ * then convert the gap to "hh:mm:ss" format and show on UI
+ */
 void CountdownWidget::update()
 {
     if (target.isValid()) {
