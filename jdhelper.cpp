@@ -16,7 +16,7 @@ JDHelper::JDHelper(QWidget *parent)
     : OrderHelper{parent}
 {
     qrCodeView = new QrCodeDialog(parent);
-    page = new QWebEnginePage(parent);
+    page = qrCodeView->get_page();
     orderPage = new QWebEnginePage(parent);
     config = new JDOrderConfig(parent);
     perfTimer.invalidate();
@@ -120,7 +120,7 @@ void JDHelper::_on_page_load()
     qDebug() << "Page finished loading";
     QUrl url = page->url();
     if (url.matches(QUrl(JD::loginUrl), JD::domainCompareRules)) {
-        qrCodeView->set_source(QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch()));
+//        qrCodeView->set_source(QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch()));
     }
     // 抱歉!  您访问的页面失联啦...
     else if (url.matches(QUrl(JD::error2Url), JD::fileCompareRules)) {
@@ -170,7 +170,7 @@ void JDHelper::_on_url_change(const QUrl &url)
     }
     // If at log-in page, show a spinner and wait for QR code
     else if (url.matches(QUrl(JD::loginUrl), JD::fileCompareRules)) {
-        qrCodeView->set_spinner();
+//        qrCodeView->set_spinner();
         qrCodeView->show();
     }
     else {
