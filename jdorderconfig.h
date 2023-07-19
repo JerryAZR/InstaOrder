@@ -15,18 +15,17 @@ public:
     explicit JDOrderConfig(QWidget *parent = nullptr);
     ~JDOrderConfig();
 
-//    QString uuid;
-
     QString getUuid() const;
-
     QString getEid() const;
     QString getFp() const;
     bool manualMode() const;
+    bool rushMode() const;
 
     void setUuid(const QString &newUuid);
     void setEid(const QString &newEid);
     void setFp(const QString &newFp);
     void setManualMode(bool manual);
+    void setRushMode(bool rush);
 
 private:
     Ui::JDOrderConfig *ui;

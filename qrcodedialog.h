@@ -2,6 +2,7 @@
 #define QRCODEDIALOG_H
 
 #include <QDialog>
+#include <QWebEnginePage>
 
 namespace Ui {
 class QrCodeDialog;
@@ -16,6 +17,7 @@ public:
     ~QrCodeDialog();
     void set_source(const QString &src);
     void set_spinner();
+    QWebEnginePage *get_page();
 
 private:
     Ui::QrCodeDialog *ui;

@@ -29,3 +29,8 @@ void QrCodeDialog::set_spinner()
     ui->widget->setHtml(spinner.readAll());
     spinner.close();
 }
+
+QWebEnginePage *QrCodeDialog::get_page()
+{
+    return ui->widget->page();
+}

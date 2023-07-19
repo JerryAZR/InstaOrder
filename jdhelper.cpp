@@ -95,11 +95,11 @@ void JDHelper::buy_item(QString itemId, int itemCnt)
         QNetworkReply * reply = browserGet(request);
         connect(reply, &QNetworkReply::finished, this, [this, reply](){
             if (reply->url().matches(QUrl(JD::addItemUrl), JD::domainCompareRules)) {
-                qDebug() << "Added to cart";
+                qDebug() << "Item added to cart";
                 request_checkout();
             } else {
-                qDebug() << "Item not added to cart. Got this url instead:";
-                qDebug() << "reply url:" << reply->url();
+                qWarning() << "Item not added to cart. Got this url instead:";
+                qWarning() << "reply url:" << reply->url();
             }
             reply->close();
             reply->deleteLater();
@@ -136,12 +136,24 @@ void JDHelper::_on_page_load()
     }
     // Not sure if this covers all item urls
     else if (url.toString().contains("item.jd")) {
-//        analyze_item_page();
         page->toHtml([this](const QString &html){analyze_item_page(html);});
     }
     else {
         qDebug() << "Page loaded:" << url;
     }
+
+    // Get eid
+    page->runJavaScript("jdtRiskContext.deviceInfo.jsToken", 0, [this](const QVariant &v){
+        if(!v.toString().isEmpty()) {
+            config->setEid(v.toString());
+        }
+    });
+    // Get fp
+    page->runJavaScript("jdtRiskContext.deviceInfo.fp", 0, [this](const QVariant &v){
+        if(!v.toString().isEmpty()) {
+            config->setFp(v.toString());
+        }
+    });
 }
 
 /**
@@ -328,8 +340,8 @@ void JDHelper::request_checkout()
         if (reply->url().matches(QUrl(JD::checkoutUrl), JD::fileCompareRules)) {
             request_submit_order();
         } else {
-            qDebug() << "Did not get checkout page. Got this url instead:";
-            qDebug() << "reply url:" << reply->url();
+            qWarning() << "Did not get checkout page. Got this url instead:";
+            qWarning() << "reply url:" << reply->url();
         }
         reply->close();
         reply->deleteLater();
@@ -355,16 +367,16 @@ void JDHelper::request_submit_order()
     QNetworkReply * postReply = browserPost(request, payload.toLocal8Bit());
     connect(postReply, &QNetworkReply::finished, this, [this, postReply](){
         QJsonDocument body;
-        qDebug() << "Got reply for post";
-        qDebug() << "Status code: " << postReply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
-        qDebug() << postReply->url();
+        qInfo() << "Got reply for post";
+        qInfo() << "Status code: " << postReply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        qInfo() << postReply->url();
         body = QJsonDocument::fromJson(postReply->readAll());
-        qDebug() << "Response body:" << body;
+        qInfo() << "Response body:" << body;
         handle_return_code(body.object().value("resultCode").toInt(-1));
     });
-    qDebug() << "Post url: " << request.url();
-    qDebug() << "Post data: " << payload;
-    qDebug() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
+    qInfo() << "Post url: " << request.url();
+    qInfo() << "Post data: " << payload;
+    qInfo() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
 }
 
 /**
@@ -397,7 +409,7 @@ QNetworkReply *JDHelper::browserPost(QNetworkRequest &request, const QByteArray 
 
 void JDHelper::handle_return_code(int code)
 {
-    qDebug() << "Order finisned in" << perfTimer.elapsed() << "milliseconds";
+    qInfo() << "Order finisned in" << perfTimer.elapsed() << "milliseconds";
     perfTimer.invalidate();
     if (code == 0) {
         emit orderFinished(true);
@@ -429,7 +441,7 @@ void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
             emit pageReady();
         }
         else if (cookie.name() == QString("__FastJD__params")) {
-            qDebug() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
+            qInfo() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
         }
         else if (cookie.name() == QString("__FastJD__eid")) {
             if (!advancedMode) config->setEid(cookie.value());

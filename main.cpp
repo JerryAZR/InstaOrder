@@ -10,7 +10,9 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     switch (type) {
     case QtDebugMsg:
+#ifdef QT_DEBUG
         fprintf(stderr, "[FastJD][Debug] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+#endif
         break;
     case QtInfoMsg:
         fprintf(stderr, "[FastJD][Info] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
