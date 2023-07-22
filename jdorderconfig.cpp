@@ -33,6 +33,16 @@ bool JDOrderConfig::manualMode() const
     return ui->advModeSel->isChecked();
 }
 
+bool JDOrderConfig::rushMode() const
+{
+    return ui->rushMode->isChecked();
+}
+
+int JDOrderConfig::getInterval() const
+{
+    return ui->reqInterval->value();
+}
+
 void JDOrderConfig::setUuid(const QString &newUuid)
 {
     ui->uuidEdit->setText(newUuid);
@@ -52,4 +62,14 @@ void JDOrderConfig::setManualMode(bool manual)
 {
     ui->advModeSel->setChecked(manual);
     ui->autoModeSel->setChecked(!manual);
+}
+
+void JDOrderConfig::setRushMode(bool rush)
+{
+    ui->rushMode->setChecked(rush);
+}
+
+void JDOrderConfig::setInterval(int interval)
+{
+    ui->reqInterval->setValue(interval);
 }

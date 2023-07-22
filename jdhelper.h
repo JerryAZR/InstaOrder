@@ -47,6 +47,8 @@ public:
     // Manual mode parameters
     JDOrderConfig *config;
     bool advancedMode = false;
+    bool rushMode = false;
+    int reqInterval = 200;
     QString uuid;
     QString eid;
     QString fp;
@@ -87,13 +89,15 @@ public:
      */
     void request_item_detail(const QString &itemId);
 
+    void request_add_item(QString itemId, int itemCnt, bool ckeckout = true, bool submit = true);
+
     /**
      * @brief request_checkout
      *
      * Send an HTTP GET request for
      * https://trade.jd.com/shopping/order/getOrderInfo.action
      */
-    void request_checkout();
+    void request_checkout(bool submit = true);
 
     /**
      * @brief request_submit_order
