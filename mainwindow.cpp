@@ -77,6 +77,12 @@ void MainWindow::get_item_detail()
     helper->get_item_detail(itemId);
 }
 
+/**
+ * @brief MainWindow::plan_order
+ *
+ * Add the order to a QMap if sufficient time remains.
+ * Orders in the map can be deleted.
+ */
 void MainWindow::plan_order()
 {
     QString itemId = ui->itemIdEdit->text();
@@ -94,20 +100,19 @@ void MainWindow::plan_order()
         return;
     }
     _plannedOrders.insert(time, info);
-    if (timeDelta > 5000) {
-        // More than 5 seconds remaining. Schedule the preparation task to execute later
+    if (timeDelta > 3000) {
+        // More than 3 seconds remaining. Schedule the preparation task to execute later
         QTimer::singleShot(timeDelta, Qt::VeryCoarseTimer, info, [this, time](){
             prepare_order(time);
         });
     } else {
-        // Less than 5 seconds remaining. Start the preparation immediately;
+        // Less than 3 seconds remaining. Start the preparation immediately;
         prepare_order(time);
     }
     // Create a label for the scheduled order
     info->listItem = create_list_item(ui->dateTimeEdit->text(), itemId, itemCnt);
     ui->listWidget->addItem(info->listItem);
     update_countdown();
-    //    ui->tmpLabel->setText(QString("Order %1 planned.").arg(itemID));
 }
 
 void MainWindow::handle_order_result(bool success)
@@ -136,6 +141,12 @@ void MainWindow::set_img_src(const QString &src)
     });
 }
 
+/**
+ * @brief MainWindow::manage_order_list
+ * @param item
+ *
+ * Show a context menu when an item (order entry) is clicked.
+ */
 void MainWindow::manage_order_list(QListWidgetItem *item)
 {
     qDebug() << "Item" << item << "clicked";
@@ -149,6 +160,13 @@ void MainWindow::manage_order_list(QListWidgetItem *item)
     menu.exec(QCursor::pos());
 }
 
+/**
+ * @brief MainWindow::prepare_order
+ * @param orderTime
+ *
+ * Schedule the order (tagged with order time) to be submitted on time.
+ * If specified time has passed, submit the order immediately.
+ */
 void MainWindow::prepare_order(qint64 orderTime)
 {
     // Check whether the order should be placed now or later

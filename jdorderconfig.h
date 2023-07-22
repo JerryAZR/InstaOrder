@@ -20,12 +20,14 @@ public:
     QString getFp() const;
     bool manualMode() const;
     bool rushMode() const;
+    int getInterval() const;
 
     void setUuid(const QString &newUuid);
     void setEid(const QString &newEid);
     void setFp(const QString &newFp);
     void setManualMode(bool manual);
     void setRushMode(bool rush);
+    void setInterval(int interval);
 
 private:
     Ui::JDOrderConfig *ui;

@@ -90,20 +90,14 @@ void JDHelper::buy_item(QString itemId, int itemCnt)
     perfTimer.start();
     if (advancedMode) {
         // Use QNetworkRequest-based method with user-defined params
-        QNetworkRequest request(QUrl(QString(JD::addItemUrl).arg(itemId).arg(itemCnt)));
-        request.setRawHeader("Referer", "https://item.jd.com/");
-        QNetworkReply * reply = browserGet(request);
-        connect(reply, &QNetworkReply::finished, this, [this, reply](){
-            if (reply->url().matches(QUrl(JD::addItemUrl), JD::domainCompareRules)) {
-                qDebug() << "Item added to cart";
-                request_checkout();
-            } else {
-                qWarning() << "Item not added to cart. Got this url instead:";
-                qWarning() << "reply url:" << reply->url();
-            }
-            reply->close();
-            reply->deleteLater();
-        });
+        if (rushMode) {
+            qDebug() << "Rush order";
+            request_add_item(itemId, itemCnt, false, false);
+            QTimer::singleShot(reqInterval, this, [this](){request_checkout(true);});
+//            QTimer::singleShot(200, this, [this](){request_submit_order();});
+        } else {
+            request_add_item(itemId, itemCnt, true, true);
+        }
     } else {
         QUrl url(QString(JD::addItemUrl).arg(itemId).arg(itemCnt));
         orderPage->load(url);
@@ -237,9 +231,17 @@ void JDHelper::_update_manual_config(int result)
         } else {
             qInfo() << "Switched to auto mode.";
         }
+
+        rushMode = config->rushMode();
+        reqInterval = config->getInterval();
+        if (rushMode) qDebug() << "Enabled rush mode";
+        else qDebug() << "Disabled rush mode";
+        // TODO: update request interval
     } else {
         // Restore mode selection
         config->setManualMode(advancedMode);
+        config->setRushMode(rushMode);
+        config->setInterval(reqInterval);
     }
 }
 
@@ -318,27 +320,59 @@ void JDHelper::request_item_detail(const QString &itemId)
     QUrl url(QString(JD::itemUrl).arg(itemId));
     QNetworkRequest request;
     request.setUrl(url);
+    perfTimer.start();
     QNetworkReply *reply = browserGet(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply](){
+        config->setInterval(perfTimer.elapsed() / 2);
         QByteArray html = reply->readAll();
         analyze_item_page(html);
+        perfTimer.invalidate();
+    });
+}
+
+/**
+ * @brief JDHelper::request_add_item
+ * @param itemId
+ * @param itemCnt
+ * @param ckeckout  Whether to auto-checkout after item added to cart.
+ * @param submit    Whether to auto-submit after checkout.
+ *
+ * Items are added to cart by submitting a GET request with item ID and
+ * quantity as payload.
+ */
+void JDHelper::request_add_item(QString itemId, int itemCnt, bool ckeckout, bool submit)
+{
+    QNetworkRequest request(QUrl(QString(JD::addItemUrl).arg(itemId).arg(itemCnt)));
+    request.setRawHeader("Referer", "https://item.jd.com/");
+    QNetworkReply * reply = browserGet(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, ckeckout, submit](){
+        if (reply->url().matches(QUrl(JD::addItemUrl), JD::domainCompareRules)) {
+            qDebug() << "Item added to cart";
+            if (ckeckout) request_checkout(submit);
+        } else {
+            qWarning() << "Item not added to cart. Got this url instead:";
+            qWarning() << "reply url:" << reply->url();
+        }
+        reply->close();
+        reply->deleteLater();
     });
 }
 
 /**
  * @brief JDHelper::request_checkout
+ * @param submit    Whether to auto-submit after checkout.
  *
  * Checkout with an HTTP GET request and set up a callback to submit order
  * after JD server respondes.
  */
-void JDHelper::request_checkout()
+void JDHelper::request_checkout(bool submit)
 {
     QNetworkRequest request((QUrl(JD::checkoutUrl)));
     request.setRawHeader("Referer", "https://cart.jd.com/");
     QNetworkReply * reply = browserGet(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply](){
+    connect(reply, &QNetworkReply::finished, this, [this, reply, submit](){
         if (reply->url().matches(QUrl(JD::checkoutUrl), JD::fileCompareRules)) {
-            request_submit_order();
+            if (submit) request_submit_order();
         } else {
             qWarning() << "Did not get checkout page. Got this url instead:";
             qWarning() << "reply url:" << reply->url();

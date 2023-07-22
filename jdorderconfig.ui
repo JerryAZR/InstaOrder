@@ -133,7 +133,7 @@
       </widget>
      </item>
      <item row="4" column="1">
-      <widget class="QSpinBox" name="reqDelayInput">
+      <widget class="QSpinBox" name="reqInterval">
        <property name="readOnly">
         <bool>false</bool>
        </property>
