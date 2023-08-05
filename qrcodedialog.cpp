@@ -34,3 +34,8 @@ QWebEnginePage *QrCodeDialog::get_page()
 {
     return ui->widget->page();
 }
+
+void QrCodeDialog::set_page(QWebEnginePage *page)
+{
+    ui->widget->setPage(page);
+}

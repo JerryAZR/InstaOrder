@@ -18,6 +18,7 @@ public:
     void set_source(const QString &src);
     void set_spinner();
     QWebEnginePage *get_page();
+    void set_page(QWebEnginePage *page);
 
 private:
     Ui::QrCodeDialog *ui;
