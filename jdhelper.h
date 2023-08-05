@@ -128,13 +128,14 @@ public:
 public slots:
     void _on_cookie_add(const QNetworkCookie &cookie);
     void _on_page_load();
-    void _on_url_change(const QUrl &url);
+    void _on_url_change();
     void _order_next_step(const QUrl &url);
     void _reload();
     void _update_manual_config(int result);
 
 signals:
     void pageReady();
+    void pageCreated();
 };
 
 #endif // JDHELPER_H

@@ -22,9 +22,9 @@ public:
     explicit CountdownWidget(QWidget *parent = nullptr);
     ~CountdownWidget();
 
-    QDateTime target;   // The countdown target
-    QTimer timer;       // The timer that updates the countdown periodically
-    bool showMillis;    // Select whether to show milliseconds or not
+    QDateTime target;           // The countdown target
+    QTimer timer;               // The timer that updates the countdown periodically
+    bool showMillis = false;    // Select whether to show milliseconds or not
 
     QDateTime getTarget() const;
 
