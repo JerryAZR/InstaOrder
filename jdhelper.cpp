@@ -16,7 +16,8 @@ JDHelper::JDHelper(QWidget *parent)
     : OrderHelper{parent}
 {
     qrCodeView = new QrCodeDialog(parent);
-    page = new QWebEnginePage(parent);
+//    page = new QWebEnginePage(parent);
+    page = qrCodeView->get_page();
     orderPage = new QWebEnginePage(parent);
     config = new JDOrderConfig(parent);
     perfTimer.invalidate();
@@ -39,9 +40,9 @@ JDHelper::JDHelper(QWidget *parent)
     // Construct QWebEngineScript object
     orderScript.setSourceCode(QString(JD::orderScriptHeader) + jQuery + orderJs);
     orderPage->scripts().insert(orderScript);
-    // Page ready signal
+    // Page creation signal
     QWebEngineScript signalScript;
-    signalScript.setName("signal_emit");
+    signalScript.setName("start_signal_emit");
     signalScript.setSourceCode("document.cookie = \"__FastJD__created=1\";");
     signalScript.setInjectionPoint(QWebEngineScript::DocumentCreation);
     signalScript.setWorldId(0);
@@ -55,7 +56,7 @@ JDHelper::JDHelper(QWidget *parent)
 
     // Page load control
     connect(page, &QWebEnginePage::loadFinished, this, &JDHelper::_on_page_load);
-    connect(page, &QWebEnginePage::urlChanged, this, &JDHelper::_on_url_change);
+    connect(this, &JDHelper::pageCreated, this, &JDHelper::_on_url_change);
     connect(page, &QWebEnginePage::loadProgress, this, [this](int p){emit progressUpdated(p);});
     // Order control
     connect(orderPage, &QWebEnginePage::urlChanged, this, &JDHelper::_order_next_step);
@@ -114,7 +115,11 @@ void JDHelper::_on_page_load()
     qDebug() << "Page finished loading";
     QUrl url = page->url();
     if (url.matches(QUrl(JD::loginUrl), JD::domainCompareRules)) {
-        qrCodeView->set_source(QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch()));
+//        qrCodeView->set_source(QString(JD::qrCodeSrc).arg(QDateTime::currentMSecsSinceEpoch()));
+//        qrCodeView->set_page(page);
+        page->runJavaScript("document.getElementsByClassName('login-form')[0].scrollIntoView();", [this](const QVariant &v){
+            qrCodeView->show();
+        });
     }
     // 抱歉!  您访问的页面失联啦...
     else if (url.matches(QUrl(JD::error2Url), JD::fileCompareRules)) {
@@ -157,15 +162,18 @@ void JDHelper::_on_page_load()
  * Preforms various actions on the current page (before it is fully loaded).
  * Action depends on its url.
  */
-void JDHelper::_on_url_change(const QUrl &url)
+void JDHelper::_on_url_change()
 {
+    QUrl url = page->url();
     if (url.matches(QUrl(JD::homeUrl), JD::domainCompareRules)) {
         emit loggedIn(QString("Loading username..."));
     }
     // If at log-in page, show a spinner and wait for QR code
     else if (url.matches(QUrl(JD::loginUrl), JD::fileCompareRules)) {
-        qrCodeView->set_spinner();
-        qrCodeView->show();
+        // TODO: Add a spinner
+//        qrCodeView->set_page(dummyPage);
+//        qrCodeView->set_spinner();
+//        qrCodeView->show();
     }
     else {
         qDebug() << "Url changed to" << url;
@@ -473,6 +481,10 @@ void JDHelper::_on_cookie_add(const QNetworkCookie &cookie)
         else if (cookie.name() == QString("__FastJD__ready")) {
             qDebug() << "Document ready";
             emit pageReady();
+        }
+        else if (cookie.name() == QString("__FastJD__created")) {
+            qDebug() << "Document created";
+            emit pageCreated();
         }
         else if (cookie.name() == QString("__FastJD__params")) {
             qInfo() << "Order submitted in" << perfTimer.elapsed() << "milliseconds";
