@@ -1,0 +1,24 @@
+{
+	"BUILD_DIR" : "/Users/tacitradiance/Documents/InstaOrder/build/InstaOrder_autogen",
+	"CMAKE_BINARY_DIR" : "/Users/tacitradiance/Documents/InstaOrder/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/Users/tacitradiance/Documents/InstaOrder/build",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/Users/tacitradiance/Documents/InstaOrder",
+	"CMAKE_SOURCE_DIR" : "/Users/tacitradiance/Documents/InstaOrder",
+	"INCLUDE_DIR" : "/Users/tacitradiance/Documents/InstaOrder/build/InstaOrder_autogen/include",
+	"INPUTS" : 
+	[
+		"/Users/tacitradiance/Documents/InstaOrder/common/jquery-3.7.0.min.js",
+		"/Users/tacitradiance/Documents/InstaOrder/JDscripts/order.js",
+		"/Users/tacitradiance/Documents/InstaOrder/common/spinner.html"
+	],
+	"LOCK_FILE" : "/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/InstaOrder_autogen.dir/AutoRcc_resources_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "/Users/tacitradiance/Qt/6.5.2/macos/./libexec/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/InstaOrder_autogen.dir/AutoRcc_resources_EWIEGA46WW_Used.txt",
+	"SOURCE" : "/Users/tacitradiance/Documents/InstaOrder/resources.qrc",
+	"VERBOSITY" : 0
+}

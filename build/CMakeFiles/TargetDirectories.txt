@@ -1,0 +1,9 @@
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/InstaOrder.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/InstaOrder_qmlimportscan.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/edit_cache.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/rebuild_cache.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/list_install_components.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/install.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/install/local.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/install/strip.dir
+/Users/tacitradiance/Documents/InstaOrder/build/CMakeFiles/InstaOrder_autogen.dir

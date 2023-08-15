@@ -1,0 +1,9 @@
+-rootPath
+/Users/tacitradiance/Documents/InstaOrder
+-cmake-output
+-output-file
+/Users/tacitradiance/Documents/InstaOrder/build/.qt_plugins/Qt6_QmlPlugins_Imports_InstaOrder.cmake
+-importPath
+/Users/tacitradiance/Documents/InstaOrder/build
+-importPath
+/Users/tacitradiance/Qt/6.5.2/macos/./qml
