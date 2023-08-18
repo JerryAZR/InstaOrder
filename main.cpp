@@ -2,31 +2,43 @@
 
 #include <QApplication>
 #include <QDateTime>
+#include <iostream>
+#include <QFile>
+#include <QTextStream>
 
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    QFile log("log.txt");
+    log.open(QFile::Append);
+    QTextStream out(&log);
     QByteArray localMsg = msg.toLocal8Bit();
-    const char *file = context.file ? context.file : "";
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     switch (type) {
     case QtDebugMsg:
 #ifdef QT_DEBUG
-        fprintf(stderr, "[FastJD][Debug] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+        const char *file = context.file ? context.file : "";
+        std::cout << "[FastJD][Debug] " << now << " : " << localMsg.constData()
+                  << " @ " << file << context.line << ":" << std::endl;
 #endif
         break;
     case QtInfoMsg:
-        fprintf(stderr, "[FastJD][Info] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+        std::cout << "[FastJD][Info] " << now << " : " << localMsg.constData() << std::endl;
+        out << "[FastJD][Info] " << now << " : " << localMsg.constData() << Qt::endl;
         break;
     case QtWarningMsg:
-        fprintf(stderr, "[FastJD][Warning] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+        std::cout << "[FastJD][Warning] " << now << " : " << localMsg.constData() << std::endl;
+        out << "[FastJD][Warning] " << now << " : " << localMsg.constData() << Qt::endl;
         break;
     case QtCriticalMsg:
-        fprintf(stderr, "[FastJD][Critical] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+        std::cout << "[FastJD][Critical] " << now << " : " << localMsg.constData() << std::endl;
+        out << "[FastJD][Critical] " << now << " : " << localMsg.constData() << Qt::endl;
         break;
     case QtFatalMsg:
-        fprintf(stderr, "[FastJD][Fatal] %lld: %s (%s:%u)\n", now, localMsg.constData(), file, context.line);
+        std::cout << "[FastJD][Fatal] " << now << " : " << localMsg.constData() << std::endl;
+        out << "[FastJD][Fatal] " << now << " : " << localMsg.constData() << Qt::endl;
         break;
     }
+    log.close();
 }
 
 int main(int argc, char *argv[])
