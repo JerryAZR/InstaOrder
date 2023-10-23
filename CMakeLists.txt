@@ -8,9 +8,13 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(BUILD_SHARED_LIBS ON)
+#set(EASYSSL_STATIC_SSL ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets WebEngineWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets WebEngineWidgets)
+
+add_subdirectory(easyssl)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -19,6 +23,8 @@ set(PROJECT_SOURCES
         orderinfo.h
         orderhelper.h
         jdhelper.h jdhelper.cpp
+        keyvalidator.h keyvalidator.cpp
+        bloomfilter.cpp bloomfilter.h
         qrcodedialog.h qrcodedialog.cpp qrcodedialog.ui
         countdownwidget.h countdownwidget.cpp countdownwidget.ui
         jdorderconfig.h jdorderconfig.cpp jdorderconfig.ui
@@ -51,6 +57,7 @@ endif()
 target_link_libraries(InstaOrder PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::WebEngineWidgets
+    easyssl
 )
 
 set_target_properties(InstaOrder PROPERTIES

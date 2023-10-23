@@ -4,8 +4,10 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QTimer>
+#include <QFile>
 #include "orderinfo.h"
 #include "orderhelper.h"
+#include "keyvalidator.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -31,8 +33,11 @@ private:
     Ui::MainWindow *ui;
     QMap<qint64, OrderInfo*> _plannedOrders;
     OrderHelper *helper;
+    keyValidator validator;
+    QFile keyFile;
 
 public slots:
+    void update_key();
     void log_in();
     void get_item_detail();
     void plan_order();

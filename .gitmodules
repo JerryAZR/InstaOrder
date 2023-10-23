@@ -1,0 +1,3 @@
+[submodule "easyssl"]
+	path = easyssl
+	url = https://github.com/QuasarApp/easyssl.git

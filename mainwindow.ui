@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>643</width>
-    <height>474</height>
+    <width>574</width>
+    <height>461</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,6 +17,27 @@
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_7">
+        <item>
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string>密钥</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="keyEdit"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="activationBtn">
+          <property name="text">
+           <string>激活</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
@@ -452,8 +473,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>643</width>
-     <height>26</height>
+     <width>574</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>

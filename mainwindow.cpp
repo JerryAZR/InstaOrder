@@ -10,6 +10,9 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QCursor>
+#include <QStandardPaths>
+#include <QFile>
+#include <QDir>
 #include "jdhelper.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -36,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->getDetailBtn, &QAbstractButton::clicked, this, &MainWindow::get_item_detail);
     connect(ui->loginBtn, &QAbstractButton::clicked, this, &MainWindow::log_in);
     connect(ui->cfgButton, &QAbstractButton::clicked, helper, &OrderHelper::show_config);
+    connect(ui->activationBtn, &QAbstractButton::clicked, this, &MainWindow::update_key);
     // Planned order management
     connect(ui->listWidget, &QListWidget::itemClicked, this, &MainWindow::manage_order_list);
     // Order helper signals
@@ -51,6 +55,23 @@ MainWindow::MainWindow(QWidget *parent)
     // Countdown timer
     connect(ui->millisSelect, &QCheckBox::clicked, ui->countdown, &CountdownWidget::setShowMillis);
     connect(ui->countdownSelect, &QCheckBox::clicked, ui->countdown, &CountdownWidget::toggleDisplay);
+    // Look for stored activation key
+    qDebug() << "App data dir: " << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir appDataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    keyFile.setFileName(appDataDir.absoluteFilePath("instaorder.key"));
+    qDebug() << "File" << keyFile.fileName() << "exists?" << keyFile.exists();
+    // If stored key exists and is valid, display on UI
+    if (keyFile.exists()) {
+        QString savedKey;
+        keyFile.open(QFile::ReadOnly | QFile::Text);
+        savedKey = keyFile.readAll();
+        if (validator.updateKey(savedKey)) {
+            ui->keyEdit->setText(savedKey);
+            ui->dateTimeEdit->setMaximumDateTime(QDateTime::fromMSecsSinceEpoch(validator.deadline));
+            qInfo() << "Load saved key: valid until " << validator.deadline;
+        }
+        keyFile.close();
+    }
     // First task
     log_in();
 }
@@ -75,6 +96,10 @@ void MainWindow::get_item_detail()
     ui->imgLabel->clear();
     QString itemId = ui->itemIdEdit->text();
     helper->get_item_detail(itemId);
+    // Validate time and ItemId
+    if (not validator.validateId(itemId)) {
+        QMessageBox::warning(this, "Waring", "商品不可用");
+    }
 }
 
 /**
@@ -90,6 +115,15 @@ void MainWindow::plan_order()
     // If sufficient time remains, add order to the planned queue
     // Otherwise, prepare it immediately;
     qint64 time = ui->dateTimeEdit->dateTime().toMSecsSinceEpoch();
+    // Validate time and ItemId
+    if (not validator.validateId(itemId)) {
+        QMessageBox::warning(this, "Waring", "商品不可用");
+        return;
+    }
+    if (not validator.validateTime(time)) {
+        QMessageBox::warning(this, "Waring", "时间不可用");
+        return;
+    }
     int delay = ui->delaySpinBox->value();
     int itemCnt = ui->itemCntSpinBox->value();
     OrderInfo *info = new OrderInfo(itemId, itemCnt, time + delay);
@@ -231,4 +265,17 @@ QListWidgetItem *MainWindow::create_list_item(QString time, QString id, int cnt)
     QString itemLabel = QString("[%1] %2 * %3").arg(time, id).arg(cnt);
     QListWidgetItem * listItem = new QListWidgetItem(itemLabel);
     return listItem;
+}
+
+void MainWindow::update_key()
+{
+    if (not validator.updateKey(ui->keyEdit->text())) {
+        QMessageBox::warning(this, "Invalid Key", "无效的激活码");
+    } else {
+        keyFile.open(QFile::WriteOnly | QFile::Text);
+        keyFile.write(ui->keyEdit->text().toUtf8());
+        keyFile.close();
+        ui->dateTimeEdit->setMaximumDateTime(QDateTime::fromMSecsSinceEpoch(validator.deadline));
+        qInfo() << "Update: valid until " << validator.deadline;
+    }
 }
