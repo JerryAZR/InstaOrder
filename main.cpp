@@ -8,6 +8,7 @@
 
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    const char *file = context.file ? context.file : "";
     QFile log("log.txt");
     log.open(QFile::Append);
     QTextStream out(&log);
@@ -16,7 +17,6 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
     switch (type) {
     case QtDebugMsg:
 #ifdef QT_DEBUG
-        const char *file = context.file ? context.file : "";
         std::cout << "[FastJD][Debug] " << now << " : " << localMsg.constData()
                   << " @ " << file << context.line << ":" << std::endl;
 #endif
